@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Заң және Мен: Викторина (14-18 жас) - 48 ячейка</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f1f5f9;
+        }
+
+        .board-container {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 6px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 800;
+            color: white;
+            position: relative;
+            transition: all 0.2s;
+            cursor: pointer;
+            text-align: center;
+            padding: 4px;
+            border: 2px solid transparent;
+            box-shadow: inset 0 -3px 0 rgba(0,0,0,0.15);
+        }
+
+        .cell.active { 
+            border-color: #1e293b; 
+            transform: scale(1.05);
+            z-index: 20;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2); 
+        }
+
+        .bg-civil { background-color: #3b82f6; }
+        .bg-labor { background-color: #10b981; }
+        .bg-admin { background-color: #f59e0b; }
+        .bg-crim { background-color: #ef4444; }
+        .bg-digital { background-color: #8b5cf6; }
+        .bg-chance { background-color: #f97316; }
+        .bg-special { background-color: #6366f1; }
+
+        .player-token {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 900;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border: 2px solid white;
+            position: absolute;
+            z-index: 10;
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .p1-token { background: #fbbf24; color: #78350f; top: 5%; left: 5%; }
+        .p2-token { background: #ec4899; color: #701a75; bottom: 5%; right: 5%; }
+
+        .dice {
+            width: 80px;
+            height: 80px;
+            background: white;
+            border: 4px solid #1e293b;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #1e293b;
+            transition: all 0.1s;
+        }
+
+        .dice:active { transform: translateY(4px); box-shadow: 0 2px 0 #1e293b; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.8);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(8px);
+        }
+
+        .quiz-option {
+            width: 100%;
+            padding: 1rem;
+            margin-top: 0.5rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 14px;
+            text-align: left;
+            font-weight: 600;
+            background: white;
+        }
+
+        .quiz-option:hover:not(:disabled) { border-color: #6366f1; background: #f5f3ff; }
+    </style>
+</head>
+<body class="p-4">
+
+    <div class="max-w-6xl mx-auto">
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <div id="p1-card" class="bg-white p-4 rounded-2xl shadow-sm border-l-4 border-amber-400">
+                <p class="text-[10px] font-black text-slate-400 uppercase">1-Ойыншы</p>
+                <p id="p1-stats" class="text-lg font-black text-slate-800">10,000 ₸ | ⭐ 0</p>
+            </div>
+            <div id="p2-card" class="bg-white p-4 rounded-2xl shadow-sm border-l-4 border-pink-400">
+                <p class="text-[10px] font-black text-slate-400 uppercase">2-Ойыншы</p>
+                <p id="p2-stats" class="text-lg font-black text-slate-800">10,000 ₸ | ⭐ 0</p>
+            </div>
+        </div>
+
+        <div class="flex flex-col lg:flex-row gap-6">
+            <div class="flex-1">
+                <div id="board" class="board-container"></div>
+            </div>
+
+            <div class="w-full lg:w-72 space-y-4">
+                <div class="bg-white p-6 rounded-3xl shadow-xl flex flex-col items-center">
+                    <h2 id="turn-text" class="text-[10px] font-black text-slate-400 mb-4 uppercase tracking-widest">Кезек: 1</h2>
+                    <div id="dice" class="dice" onclick="rollDice()">?</div>
+                </div>
+
+                <div class="bg-slate-900 p-4 rounded-3xl h-64 overflow-hidden flex flex-col">
+                    <p class="text-[9px] font-bold text-indigo-400 uppercase mb-2">Тарих</p>
+                    <div id="history" class="text-[10px] text-slate-400 space-y-2 overflow-y-auto custom-scrollbar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal" class="modal p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl">
+            <div id="modal-tag" class="inline-block px-3 py-1 rounded-full text-[9px] font-black text-white mb-4 uppercase">Бөлім</div>
+            <h3 id="modal-q" class="text-lg font-bold text-slate-800 mb-6 leading-tight">...</h3>
+            <div id="quiz-options" class="space-y-2"></div>
+            <div id="quiz-feedback" class="hidden mt-4 p-4 rounded-xl text-xs font-bold"></div>
+            <button id="modal-next-btn" onclick="nextTurn()" class="hidden w-full mt-6 bg-indigo-600 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest">Жалғастыру</button>
+        </div>
+    </div>
+
+    <script>
+        const cellsData = [
+            { id: 1, type: 'bg-special', title: 'Старт', q: '14 жасқа толдыңыз. Құқық әлеміне қош келдіңіз!', a: ['Алға!'], correct: 0, win: 'Сәттілік!', m: 0, r: 0 },
+            { id: 2, type: 'bg-civil', title: 'Депозит', q: '14 жаста банкте өз атыңызға депозит ашуға бола ма?', a: ['Иә', 'Жоқ'], correct: 0, win: 'Дұрыс! 14 жастан рұқсат.', m: 1000, r: 1 },
+            { id: 3, type: 'bg-labor', title: 'Келісім', q: '14 жаста жұмыс істеу үшін ата-ана келісімі керек пе?', a: ['Иә', 'Жоқ'], correct: 0, win: 'Дұрыс! Жазбаша келісім міндетті.', m: 2000, r: 1 },
+            { id: 4, type: 'bg-admin', title: 'Түнгі көше', q: '16 жаста түнгі 23:00-ден кейін көшеде жалғыз жүруге бола ма?', a: ['Жоқ', 'Иә'], correct: 0, win: 'Дұрыс! 18-ге дейін тыйым салынған.', penaltyM: -2000, penaltyR: -2 },
+            { id: 5, type: 'bg-crim', title: 'Ұрлық', q: 'Ұрлық үшін қылмыстық жауапкершілік неше жастан басталады?', a: ['14 жастан', '16 жастан'], correct: 0, win: 'Дұрыс! Ауыр қылмыстарға 14-тен.', penaltyM: -5000, penaltyR: -5 },
+            { id: 6, type: 'bg-digital', title: 'Желі', q: 'Интернетте біреуді қорлау үшін жауапкершілік бар ма?', a: ['Иә', 'Жоқ'], correct: 0, win: 'Дұрыс!', m: 0, r: 1 },
+            { id: 7, type: 'bg-labor', title: 'Сағат', q: '14-16 жаста аптасына неше сағат жұмыс істеуге болады?', a: ['24 сағат', '40 сағат'], correct: 0, win: 'Дұрыс!', m: 1000, r: 1 },
+            { id: 8, type: 'bg-chance', title: 'Сыйлық', q: 'Сіз мектепте белсенді болдыңыз!', a: ['Рақмет'], correct: 0, win: 'Бонус!', m: 3000, r: 3 },
+            { id: 9, type: 'bg-civil', title: 'ID Карта', q: 'Жеке куәлік алу міндетті жас?', a: ['16 жас', '14 жас'], correct: 0, win: 'Дұрыс!', m: 0, r: 1 },
+            { id: 10, type: 'bg-admin', title: 'Вейп', q: 'Мектепте вейп шегуге бола ма?', a: ['Жоқ', 'Иә'], correct: 0, win: 'Дұрыс!', penaltyM: -3000, penaltyR: -2 },
+            { id: 11, type: 'bg-crim', title: 'Бұзақылық', q: '16 жаста көшеде балағат сөйлеу - бұл...', a: ['Әкімшілік бұзушылық', 'Ештеңе емес'], correct: 0, win: 'Дұрыс!', penaltyM: -4000, penaltyR: -3 },
+            { id: 12, type: 'bg-labor', title: 'Демалыс', q: 'Жасөспірімдерге демалыс ұзағырақ беріле ме?', a: ['Иә', 'Жоқ'], correct: 0, win: 'Иә, кемінде 30 күн.', m: 1000, r: 1 },
+            { id: 13, type: 'bg-special', title: 'Мопед', q: 'Мопед жүргізу куәлігін (А1) неше жаста алуға болады?', a: ['16 жаста', '14 жаста'], correct: 0, win: 'Дұрыс!', m: 0, r: 2 },
+            { id: 14, type: 'bg-civil', title: 'Табыс', q: '14 жасар бала өз табысын өзі жұмсай ала ма?', a: ['Иә', 'Жоқ'], correct: 0, win: 'Дұрыс!', m: 2000, r: 1 },
+            { id: 15, type: 'bg-digital', title: 'Хакерлік', q: 'Бөтен аккаунтты бұзу қылмыс па?', a: ['Иә', 'Жоқ'], correct: 0, win: 'Дұрыс!', penaltyM: -10000, penaltyR: -5 },
+            { id: 16, type: 'bg-chance', title: 'Лото', q: 'Сіз байқаудан ақшалай сыйлық ұттыңыз!', a: ['Керемет'], correct: 0, win: 'Табыс!', m: 5000, r: 0 },
+            { id: 17, type: 'bg-admin', title: 'Кино', q: '18+ фильміне 17 жаста кіруге рұқсат па?', a: ['Жоқ', 'Иә'], correct: 0, win: 'Дұрыс!', penaltyM: -1000, penaltyR: 0 },
+            { id: 18, type: 'bg-labor', title: 'Түн', q: '17 жаста түнгі ауысымда жұмыс істеуге бола ма?', a: ['Жоқ', 'Иә'], correct: 0, win: 'Дұрыс! Тыйым салынған.', penaltyM: 0, penaltyR: -1 },
+            { id: 19, type: 'bg-crim', title: 'Бопсалау', q: 'Ақша бопсалау (вымогательство) үшін жауапкершілік неше жастан?', a: ['14 жастан', '16 жастан'], correct: 0, win: 'Дұрыс!', penaltyM: -8000, penaltyR: -5 },
+            { id: 20, type: 'bg-civil', title: 'Мұра', q: '15 жаста мұрагер болуға бола ма?', a: ['Иә', 'Жоқ'], correct: 0, win: 'Дұрыс!', m: 2000, r: 1 },
+            { id: 21, type: 'bg-admin', title: 'Митинг', q: 'Рұқсат етілмеген митингке қатысу жауаптылыққа әкеле ме?', a: ['Иә', 'Жоқ'], correct: 0, win: 'Дұрыс!', penaltyM: -5000, penaltyR: -3 },
+            { id: 22, type: 'bg-digital', title: 'Авторлық', q: '14 жаста туындыға авторлық құқық алуға бола ма?', a: ['Иә', 'Жоқ'], correct: 0, win: 'Дұрыс!', m: 3000, r: 2 },
+            { id: 23, type: 'bg-labor', title: 'Сынақ', q: 'Жасөспірімге сынақ мерзімін қоюға бола ма?', a: ['Жоқ', 'Иә'], correct: 0, win: 'Дұрыс! Тыйым салынған.', m: 1000, r: 1 },
+            { id: 24, type: 'bg-chance', title: 'Сәттілік', q: 'Сіз волонтер болдыңыз!', a: ['Жақсы'], correct: 0, win: 'Репутация +5', m: 0, r: 5 },
+            { id: 25, type: 'bg-civil', title: 'Эмансипация', q: '16 жаста толық ересек деп танылу мүмкін бе?', a: ['Иә', 'Жоқ'], correct: 0, win: 'Дұрыс! Сот арқылы.', m: 0, r: 5 },
+            { id: 26, type: 'bg-admin', title: 'Қоқыс', q: 'Көшеге қоқыс тастау (16 жас) - бұл...', a: ['Әкімшілік айыппұл', 'Ескерту'], correct: 0, win: 'Дұрыс!', penaltyM: -2000, penaltyR: -1 },
+            { id: 27, type: 'bg-crim', title: 'Жалған', q: 'Терроризм туралы жалған мәлімет беру жасы?', a: ['14 жас', '18 жас'], correct: 0, win: 'Дұрыс! Өте ауыр қылмыс.', penaltyM: -20000, penaltyR: -10 },
+            { id: 28, type: 'bg-labor', title: 'Медтексеру', q: 'Жас жұмысшылар медтексеруден өтуі керек пе?', a: ['Иә, жыл сайын', 'Жоқ'], correct: 0, win: 'Дұрыс!', m: 1000, r: 1 },
+            { id: 29, type: 'bg-digital', title: 'Спам', q: 'Жаппай спам жіберу заңсыз ба?', a: ['Иә', 'Жоқ'], correct: 0, win: 'Дұрыс!', penaltyM: -1000, penaltyR: 0 },
+            { id: 30, type: 'bg-civil', title: 'Мәміле', q: '15 жаста қымбат телефон сатып алу үшін ата-ана рұқсаты керек пе?', a: ['Иә', 'Жоқ'], correct: 0, win: 'Дұрыс!', m: 0, r: 1 },
+            { id: 31, type: 'bg-admin', title: 'Кафе', q: '22:00-ден кейін кафеде ересектерсіз отыруға бола ма?', a: ['Жоқ', 'Иә'], correct: 0, win: 'Дұрыс!', penaltyM: -3000, penaltyR: -2 },
+            { id: 32, type: 'bg-chance', title: 'Көмек', q: 'Сіз қарт адамға көмектестіңіз.', a: ['Рақмет'], correct: 0, win: 'Сыйлық!', m: 2000, r: 5 },
+            { id: 33, type: 'bg-crim', title: 'Тонау', q: 'Біреудің телефонын тартып алу - бұл...', a: ['Қылмыс (Тонау)', 'Ойын'], correct: 0, win: 'Дұрыс! 14 жастан жауапты.', penaltyM: -15000, penaltyR: -10 },
+            { id: 34, type: 'bg-labor', title: 'Сенбі', q: 'Жасөспірімді демалыс күні жұмысқа шақыруға бола ма?', a: ['Жоқ', 'Иә'], correct: 0, win: 'Дұрыс! Тыйым салынған.', m: 1000, r: 1 },
+            { id: 35, type: 'bg-digital', title: 'Пираттық', q: 'Заңсыз контент тарату жауаптылыққа әкеле ме?', a: ['Иә', 'Жоқ'], correct: 0, win: 'Дұрыс!', penaltyM: -5000, penaltyR: -3 },
+            { id: 36, type: 'bg-civil', title: 'Стипендия', q: 'Стипендияны жұмсау үшін рұқсат керек пе?', a: ['Жоқ', 'Иә'], correct: 0, win: 'Дұрыс!', m: 1000, r: 1 },
+            { id: 37, type: 'bg-admin', title: 'Тәртіп', q: 'Мектеп мүлкін бүлдіру (16 жас)...', a: ['Әкімшілік жауаптылық', 'Жазасыз'], correct: 0, win: 'Дұрыс!', penaltyM: -5000, penaltyR: -4 },
+            { id: 38, type: 'bg-special', title: 'Денсаулық', q: '16 жастан бастап дәрігерге өз бетінше қаралуға бола ма?', a: ['Иә', 'Жоқ'], correct: 0, win: 'Дұрыс! Заң бойынша рұқсат.', m: 0, r: 2 },
+            { id: 39, type: 'bg-crim', title: 'Вандализм', q: 'Ғимаратқа сурет салу (вандализм) үшін жауапкершілік бар ма?', a: ['Иә', 'Жоқ'], correct: 0, win: 'Дұрыс!', penaltyM: -6000, penaltyR: -5 },
+            { id: 40, type: 'bg-labor', title: 'Зиян жұмыс', q: 'Ауыр жұмысқа жасөспірімді алуға бола ма?', a: ['Жоқ', 'Иә'], correct: 0, win: 'Дұрыс! Қатаң тыйым салынған.', m: 1000, r: 1 },
+            { id: 41, type: 'bg-digital', title: 'Қолтаңба', q: 'Электронды цифрлық қолтаңбаны (ЭЦП) 16 жаста алуға бола ма?', a: ['Иә', 'Жоқ'], correct: 0, win: 'Дұрыс!', m: 0, r: 2 },
+            { id: 42, type: 'bg-chance', title: 'Сыйақы', q: 'Сіз спорттық жарыста жеңіске жеттіңіз!', a: ['Ура!'], correct: 0, win: 'Бонус!', m: 7000, r: 5 },
+            { id: 43, type: 'bg-admin', title: 'Полиция', q: 'Полиция тоқтатқанда құжат көрсету міндетті ме?', a: ['Иә', 'Жоқ'], correct: 0, win: 'Дұрыс!', m: 0, r: 1 },
+            { id: 44, type: 'bg-civil', title: 'Неке', q: 'Ерекше жағдайда 16 жаста некеге тұруға бола ма?', a: ['Иә, сот рұқсатымен', 'Жоқ'], correct: 0, win: 'Дұрыс!', m: 0, r: 3 },
+            { id: 45, type: 'bg-crim', title: 'Зорлық', q: 'Күш көрсету қылмысы үшін жауапкершілік жасы?', a: ['14 жас', '18 жас'], correct: 0, win: 'Дұрыс!', penaltyM: -10000, penaltyR: -10 },
+            { id: 46, type: 'bg-labor', title: 'Құқық', q: 'Жұмыстан шығу үшін 1 ай бұрын ескерту керек пе?', a: ['Иә', 'Жоқ'], correct: 0, win: 'Дұрыс!', m: 1000, r: 1 },
+            { id: 47, type: 'bg-admin', title: 'Куәлік', q: 'Көлік жүргізу куәлігін (В) алуға дайындалу жасы?', a: ['17 жас', '14 жас'], correct: 0, win: 'Дұрыс! Оқуға болады, бірақ жүргізу - 18-ден.', m: 0, r: 2 },
+            { id: 48, type: 'bg-special', title: 'Мәре', q: 'Құттықтаймыз! Сіз 18-ге толдыңыз. Толық дееспособтысыз!', a: ['Жеңіс!'], correct: 0, win: 'Ойын аяқталды!', m: 10000, r: 20 }
+        ];
+
+        let players = [
+            { id: 0, pos: 1, balance: 10000, rep: 0, name: "1-Ойыншы", tClass: "p1-token" },
+            { id: 1, pos: 1, balance: 10000, rep: 0, name: "2-Ойыншы", tClass: "p2-token" }
+        ];
+
+        let turn = 0;
+        let isRolling = false;
+
+        function init() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+            cellsData.forEach(c => {
+                const d = document.createElement('div');
+                d.id = `cell-${c.id}`;
+                d.className = `cell ${c.type}`;
+                d.innerHTML = `<span>${c.id}</span><p class="text-[5px] mt-1 uppercase">${c.title}</p>`;
+                board.appendChild(d);
+            });
+            updateUI();
+        }
+
+        function rollDice() {
+            if (isRolling) return;
+            isRolling = true;
+            const diceEl = document.getElementById('dice');
+            let count = 0;
+            const anim = setInterval(() => {
+                diceEl.innerText = Math.floor(Math.random() * 6) + 1;
+                if (++count > 12) {
+                    clearInterval(anim);
+                    const res = Math.floor(Math.random() * 6) + 1;
+                    diceEl.innerText = res;
+                    setTimeout(() => movePlayer(res), 300);
+                }
+            }, 60);
+        }
+
+        function movePlayer(steps) {
+            let p = players[turn];
+            p.pos += steps;
+            if (p.pos > cellsData.length) p.pos = cellsData.length;
+            updateUI();
+            setTimeout(() => showQuiz(cellsData[p.pos - 1]), 500);
+        }
+
+        function showQuiz(data) {
+            const m = document.getElementById('modal');
+            const qText = document.getElementById('modal-q');
+            const opts = document.getElementById('quiz-options');
+            const fb = document.getElementById('quiz-feedback');
+            const nextBtn = document.getElementById('modal-next-btn');
+            const tag = document.getElementById('modal-tag');
+
+            tag.className = `inline-block px-3 py-1 rounded-full text-[9px] font-black text-white mb-4 uppercase ${data.type}`;
+            tag.innerText = data.title;
+            qText.innerText = data.q;
+            opts.innerHTML = '';
+            fb.classList.add('hidden');
+            nextBtn.classList.add('hidden');
+
+            data.a.forEach((ans, i) => {
+                const b = document.createElement('button');
+                b.className = 'quiz-option';
+                b.innerText = ans;
+                b.onclick = () => checkAnswer(i, data);
+                opts.appendChild(b);
+            });
+
+            m.style.display = 'flex';
+        }
+
+        function checkAnswer(idx, data) {
+            const fb = document.getElementById('quiz-feedback');
+            const nextBtn = document.getElementById('modal-next-btn');
+            let p = players[turn];
+
+            document.querySelectorAll('.quiz-option').forEach(b => b.disabled = true);
+            fb.classList.remove('hidden');
+
+            if (idx === data.correct) {
+                fb.className = 'mt-4 p-4 rounded-xl text-xs font-bold bg-green-50 text-green-700';
+                fb.innerText = "✅ " + data.win;
+                p.balance += data.m || 0;
+                p.rep += data.r || 0;
+            } else {
+                fb.className = 'mt-4 p-4 rounded-xl text-xs font-bold bg-red-50 text-red-700';
+                fb.innerText = "❌ Қате! Заңды білу маңызды.";
+                p.balance += data.penaltyM || 0;
+                p.rep += data.penaltyR || 0;
+            }
+
+            log(`${p.name}: ${data.title}`);
+            nextBtn.classList.remove('hidden');
+            updateUI();
+        }
+
+        function nextTurn() {
+            document.getElementById('modal').style.display = 'none';
+            if (players[turn].pos === cellsData.length) {
+                alert(`Ойын аяқталды! ${players[turn].name} жеңіске жетті!`);
+                location.reload();
+                return;
+            }
+            turn = (turn === 0) ? 1 : 0;
+            isRolling = false;
+            document.getElementById('dice').innerText = '?';
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('p1-stats').innerText = `${players[0].balance.toLocaleString()} ₸ | ⭐ ${players[0].rep}`;
+            document.getElementById('p2-stats').innerText = `${players[1].balance.toLocaleString()} ₸ | ⭐ ${players[1].rep}`;
+            document.getElementById('p1-card').style.opacity = turn === 0 ? '1' : '0.4';
+            document.getElementById('p2-card').style.opacity = turn === 1 ? '1' : '0.4';
+            document.getElementById('turn-text').innerText = `Кезек: ${players[turn].name}`;
+
+            document.querySelectorAll('.player-token').forEach(t => t.remove());
+            players.forEach(p => {
+                const cell = document.getElementById(`cell-${p.pos}`);
+                if (cell) {
+                    const t = document.createElement('div');
+                    t.className = `player-token ${p.tClass}`;
+                    t.innerText = p.id + 1;
+                    cell.appendChild(t);
+                }
+            });
+
+            document.querySelectorAll('.cell').forEach(c => c.classList.remove('active'));
+            document.getElementById(`cell-${players[turn].pos}`)?.classList.add('active');
+        }
+
+        function log(msg) {
+            const h = document.getElementById('history');
+            const d = document.createElement('div');
+            d.className = 'p-2 bg-slate-800 rounded-lg mb-1 border-l-2 border-indigo-500';
+            d.innerText = msg;
+            h.prepend(d);
+        }
+
+        init();
+    </script>
+</body>
+</html>
